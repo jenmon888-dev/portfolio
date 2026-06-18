@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>我的客户 · AI 作业</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    background: #ECEDF0;
+    color: #222;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; padding: 0; }
+  input { font-family: inherit; }
+
+  /* 手机外壳：固定 375×812（设计稿 750×1624 ÷ 2） */
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: #F5F5F5;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 24px rgba(0,0,0,0.08);
+  }
+  /* 页面内容在外壳内部滚动（状态栏以下、tabbar 以上） */
+  .page {
+    position: absolute;
+    top: 44px;
+    left: 0;
+    right: 0;
+    bottom: 60px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page.hidden { display: none; }
+
+  /* 状态栏 */
+  .statusbar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #000;
+    background: #fff;
+  }
+  .statusbar .right { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+  /* 导航栏 */
+  .navbar {
+    height: 44px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .navbar .back, .navbar .search {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #222;
+  }
+  .navbar .title {
+    font-size: 17px;
+    font-weight: 500;
+    color: #222;
+  }
+
+  /* 店铺一级 Tab（横向滚动） */
+  .shop-tabs {
+    height: 40px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 1px solid #E8ECF2;
+    white-space: nowrap;
+    scrollbar-width: none;
+    /* 移到 main 内后用负 margin 抵消 main 的 12px 内边距，保持全宽贴边 */
+    margin: 0 -12px 12px;
+  }
+  .shop-tabs::-webkit-scrollbar { display: none; }
+  .shop-tab {
+    flex-shrink: 0;
+    height: 40px;
+    line-height: 40px;
+    font-size: 14px;
+    color: #737587;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+  }
+  .shop-tab.active {
+    color: #FF6611;
+    font-weight: 500;
+  }
+  .shop-tab.active::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 2px;
+    border-radius: 1px;
+    background: #FF6611;
+  }
+
+  /* 主内容区 */
+  .main {
+    padding: 12px 12px 80px;
+    background: #F5F5F5;
+  }
+
+  /* 断点提醒卡片（大卡片 12px = 750设计稿 24px） */
+  .alert-card {
+    background: linear-gradient(90deg, #FDFDFD 0%, #FFF5F5 46%, #FFE9E9 100%);
+    border: 2px solid #FFDBDB;
+    border-radius: 12px;
+    padding: 16px 14px;
+    margin-bottom: 12px;
+    position: relative;
+    box-shadow: 0 2px 11px rgba(0,0,0,0.06);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .alert-card:active { transform: scale(0.99); }
+  .alert-card__inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .alert-card__icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #FFDDDD 13%, #FFFEFE 100%);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(255, 102, 17, 0.15);
+    overflow: hidden;
+  }
+  .alert-card__content { flex: 1; min-width: 0; }
+  .alert-card__title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #222;
+    line-height: 18px;
+    margin-bottom: 4px;
+  }
+  .alert-card__desc {
+    font-size: 12px;
+    color: #737587;
+    line-height: 16px;
+  }
+  .alert-card__desc .num {
+    color: #FF6611;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0 2px;
+  }
+  .alert-card__btn {
+    background: #FF6611;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .alert-card__btn:active { background: #CC4E0A; }
+
+  /* 客户卡片（12px = 750 设计稿 24px） */
+  .customer-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .customer-card:active {
+    transform: scale(0.995);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .customer-card__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .customer-card__name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #222;
+    line-height: 22px;
+  }
+  .customer-card__name .phone {
+    color: #737587;
+    font-weight: 400;
+    margin-left: 6px;
+    font-size: 14px;
+  }
+  .customer-card__phone-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-left: 4px;
+    color: #FF6611;
+    vertical-align: -3px;
+  }
+  .customer-card__phone-icon:active { opacity: 0.6; }
+  .customer-card__profile-arrow {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #AFB3C2;
+    font-size: 20px;
+    line-height: 1;
+    margin-left: 8px;
+  }
+  .customer-card__profile-arrow:active { color: #FF6611; }
+  /* 访问行：点击调起行为时间轴弹窗 */
+  .customer-card__activity {
+    font-size: 12px;
+    color: #737587;
+    line-height: 18px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 2px 0;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .customer-card__activity:active { background: #FAFBFC; }
+  .customer-card__activity-text {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .customer-card__activity-arrow {
+    color: #AFB3C2;
+    font-size: 16px;
+    line-height: 1;
+    margin-left: 2px;
+  }
+  .customer-card__activity .product {
+    color: #508CEE;
+    font-weight: 500;
+    font-size: 13px;
+    margin: 0 2px;
+  }
+  .customer-card__activity .more {
+    color: #737587;
+    opacity: 0.8;
+    margin-left: 2px;
+  }
+  .customer-card__stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #737587;
+    margin-bottom: 12px;
+    padding-top: 2px;
+  }
+  .customer-card__stats span strong {
+    color: #222;
+    font-weight: 500;
+    margin: 0 2px;
+  }
+  .customer-card__actions {
+    display: flex;
+    gap: 8px;
+  }
+  /* 按钮（4px = 750设计稿 8px） */
+  .btn {
+    flex: 1;
+    height: 32px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    border: 1px solid #D8DAE3;
+    background: #fff;
+    color: #222;
+  }
+  .btn:active { opacity: 0.85; }
+  .btn--primary {
+    border-color: #FF6611;
+    color: #FF6611;
+    background: #fff;
+  }
+  .btn--primary:active { background: #FFEFE7; }
+
+  /* 页面切换 */
+  .page--customer { /* 使用上方定义的默认 .page 规则 */ }
+
+  /* 客户详情静态图 overlay */
+  .profile-overlay {
+    position: absolute;
+    inset: 0;
+    background: #F5F5F5;
+    z-index: 250;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .profile-overlay.show { transform: translateX(0); }
+  .profile-overlay__head {
+    height: 44px;
+    flex-shrink: 0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-bottom: 1px solid #F0F2F5;
+    position: relative;
+    z-index: 2;
+  }
+  .profile-overlay__back {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #222;
+    font-size: 22px;
+    cursor: pointer;
+  }
+  .profile-overlay__title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 500;
+    color: #222;
+    margin-right: 28px;
+  }
+  .profile-overlay__body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: #F5F5F5;
+    padding-bottom: 60px;
+  }
+  .profile-overlay__body::-webkit-scrollbar { display: none; }
+
+  /* ============ 客户详情页真实UI ============ */
+  .pd-section {
+    background: #fff;
+    margin: 10px 12px;
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .pd-section h4 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #222;
+  }
+  /* 基本信息 */
+  .pd-base__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .pd-base__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .pd-base__name .n {
+    font-size: 18px;
+    font-weight: 600;
+    color: #222;
+  }
+  .pd-base__name .female {
+    color: #FF4D88;
+    font-size: 14px;
+  }
+  .pd-base__name .tag-new {
+    font-size: 11px;
+    color: #FF6611;
+    background: #FFF1E8;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .pd-base__name .age {
+    font-size: 12px;
+    color: #737587;
+  }
+  .pd-base__profile {
+    font-size: 12px;
+    color: #737587;
+    flex-shrink: 0;
+  }
+  .pd-base__profile .arrow { color: #C4C7CE; margin-left: 2px; }
+  .pd-base__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    gap: 8px;
+  }
+  .pd-base__bind {
+    font-size: 13px;
+    color: #222;
+  }
+  .pd-base__call {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border: 1px solid #FF6611;
+    color: #FF6611;
+    border-radius: 16px;
+    font-size: 13px;
+    background: #fff;
+  }
+  .pd-base__call:active { background: #FFF7F2; }
+  /* 客户档案 */
+  .pd-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .pd-tab {
+    flex: 1;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #737587;
+    background: #F5F5F5;
+    cursor: pointer;
+    position: relative;
+  }
+  .pd-tab.active {
+    color: #fff;
+    background: linear-gradient(90deg, #FF8541 0%, #FF6611 100%);
+    font-weight: 500;
+  }
+  .pd-tab .red-dot {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    background: #FF3B30;
+    border-radius: 50%;
+  }
+  .pd-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #737587;
+    margin-bottom: 10px;
+  }
+  .pd-stat .blue {
+    color: #508CEE;
+    font-size: 11px;
+    background: #EAF1FE;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .pd-policy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 1px solid #F0F2F5;
+    cursor: pointer;
+  }
+  .pd-policy__left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+  }
+  .pd-policy__type {
+    width: 36px;
+    font-size: 13px;
+    color: #222;
+    font-weight: 500;
+  }
+  .pd-policy__col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 78px;
+  }
+  .pd-policy__col .lbl { font-size: 11px; color: #AFB3C2; }
+  .pd-policy__col .val { font-size: 14px; color: #222; font-weight: 500; }
+  .pd-policy__arrow { color: #C4C7CE; font-size: 16px; }
+  /* 客户断点 */
+  .pd-break {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pd-break__tag {
+    font-size: 11px;
+    color: #fff;
+    background: linear-gradient(90deg, #FF6357 0%, #FF3B30 100%);
+    padding: 3px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .pd-break__name {
+    flex: 1;
+    font-size: 13px;
+    color: #222;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pd-break__time {
+    font-size: 11px;
+    color: #AFB3C2;
+  }
+  .pd-collapse {
+    text-align: center;
+    color: #C4C7CE;
+    font-size: 14px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #F5F5F5;
+  }
+  /* 卡券 / 礼包 */
+  .pd-card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #222;
+    font-weight: 500;
+  }
+  .pd-card-row .blue-link {
+    color: #508CEE;
+    font-size: 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .pd-coupon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid #F0F2F5;
+  }
+  .pd-coupon__tag {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+  .pd-coupon__tag.purple { background: linear-gradient(90deg, #8E6BFF 0%, #6D4DEE 100%); }
+  .pd-coupon__tag.red { background: linear-gradient(90deg, #FF6357 0%, #FF3B30 100%); }
+  .pd-coupon__tag.gray { background: #AFB3C2; }
+  .pd-coupon__tag.blue { background: linear-gradient(90deg, #4FA8FF 0%, #2E7BEE 100%); }
+  .pd-coupon__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .pd-coupon__name {
+    font-size: 13px;
+    color: #222;
+    font-weight: 500;
+  }
+  .pd-coupon__sub {
+    font-size: 11px;
+    color: #AFB3C2;
+  }
+  .pd-coupon__btn {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 14px;
+    border: 1px solid;
+  }
+  .pd-coupon__btn.primary { color: #FF6611; border-color: #FF6611; background: #fff; }
+  .pd-coupon__btn.disabled { color: #AFB3C2; border-color: #E8ECF2; background: #F5F5F5; }
+  .pd-coupon__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  /* 轨迹 */
+  .pd-trace {
+    padding: 10px 0;
+    border-top: 1px solid #F0F2F5;
+    font-size: 12px;
+    color: #737587;
+    line-height: 1.7;
+  }
+  .pd-trace:first-of-type { border-top: none; }
+  .pd-trace .label {
+    display: inline-block;
+    font-size: 11px;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 6px;
+  }
+  .pd-trace .label.red { background: linear-gradient(90deg, #FF6357 0%, #FF3B30 100%); }
+  .pd-trace .label.purple { background: linear-gradient(90deg, #8E6BFF 0%, #6D4DEE 100%); }
+  .pd-trace .label.gray { background: #AFB3C2; }
+  .pd-trace .time { color: #AFB3C2; font-size: 11px; }
+  .pd-trace .body { color: #222; margin-top: 2px; font-size: 13px; }
+  .pd-trace .body .product { color: #FF6611; }
+
+  /* ============ AI 顾问页真实UI ============ */
+  .ai-shop-tabs {
+    display: flex;
+    gap: 18px;
+    background: #fff;
+    padding: 10px 14px 0;
+    overflow-x: auto;
+    border-bottom: 1px solid #E8ECF2;
+    flex-shrink: 0;
+  }
+  .ai-shop-tabs::-webkit-scrollbar { display: none; }
+  .ai-shop-tab {
+    flex-shrink: 0;
+    padding-bottom: 10px;
+    font-size: 14px;
+    color: #737587;
+    position: relative;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ai-shop-tab.active {
+    color: #FF6611;
+    font-weight: 500;
+  }
+  .ai-shop-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 2px;
+    background: #FF6611;
+    border-radius: 1px;
+  }
+  .ai-filter {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #F5F5F5;
+  }
+  .ai-filter__pill {
+    padding: 4px 14px;
+    font-size: 12px;
+    border-radius: 12px;
+    background: #fff;
+    color: #737587;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .ai-filter__pill.active {
+    background: #FFF1E8;
+    color: #FF6611;
+    border-color: #FFD9BF;
+  }
+  .ai-msg {
+    display: flex;
+    gap: 12px;
+    padding: 14px 12px;
+    background: #fff;
+    margin-bottom: 1px;
+  }
+  .ai-msg__avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .ai-msg__main { flex: 1; min-width: 0; }
+  .ai-msg__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .ai-msg__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #222;
+  }
+  .ai-msg__time {
+    font-size: 11px;
+    color: #AFB3C2;
+  }
+  .ai-msg__sub {
+    font-size: 12px;
+    color: #737587;
+    margin-bottom: 10px;
+  }
+  .ai-msg__sub .card { color: #222; margin-right: 4px; }
+  .ai-msg__actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .ai-msg__btn {
+    height: 28px;
+    padding: 0 14px;
+    font-size: 12px;
+    border-radius: 14px;
+    border: 1px solid;
+    background: #fff;
+  }
+  .ai-msg__btn.gray { color: #737587; border-color: #DDD; }
+  .ai-msg__btn.primary { color: #FF6611; border-color: #FF6611; }
+  .ai-end {
+    text-align: center;
+    padding: 24px 0 36px;
+    color: #C4C7CE;
+    font-size: 12px;
+  }
+
+  /* 客户卡片点击整块可点 */
+  .customer-card { cursor: pointer; }
+
+  /* 底部 Tab（限在 .phone 容器内） */
+  .tabbar {
+    position: absolute;
+    bottom: 0;
+    width: 375px;
+    height: 60px;
+    background: #fff;
+    display: flex;
+    border-top: 1px solid #E8ECF2;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 40;
+  }
+  .tabbar__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: #383A47;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tabbar__item.active { color: #FF6611; }
+  .tabbar__item.active .label { font-weight: 500; }
+  .tabbar__item .icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .tabbar__item .icon svg { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  .tabbar__item .icon .icon--active { display: none; }
+  .tabbar__item.active .icon .icon--default { display: none; }
+  .tabbar__item.active .icon .icon--active { display: block; }
+  .tabbar__item .label { font-size: 11px; line-height: 1; }
+
+  /* 筛选弹窗：贴在筛选条正下方（mask 已从 128px 开始，弹窗贴 mask 顶部） */
+  .filter-popup {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 375px;
+    background: #fff;
+    transform: translateY(-100%);
+    transition: transform 0.25s ease;
+    max-height: calc(100vh - 128px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .mask.show .filter-popup { transform: translateY(0); }
+
+  /* mask 起点从筛选条下方开始（定位在 .phone 中的 128px） */
+  .mask {
+    position: absolute;
+    top: 128px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    overflow: hidden;
+  }
+  .mask.show { opacity: 1; pointer-events: auto; }
+
+  .filter-popup__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    padding: 4px 12px;
+    background: rgba(0,0,0,0.4);
+    text-align: center;
+  }
+
+  .filter-popup__bar {
+    height: 40px;
+    background: #fff;
+    display: flex;
+    border-bottom: 1px solid #E8ECF2;
+  }
+  .filter-popup__bar-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 14px;
+    color: #737587;
+  }
+  .filter-popup__bar-item.active {
+    color: #FF6611;
+    font-weight: 500;
+  }
+  .filter-popup__bar-item .arrow-down {
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #AFB3C2;
+  }
+  .filter-popup__bar-item .arrow-up {
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid #FF6611;
+  }
+
+  .filter-popup__body {
+    padding: 16px 12px;
+    overflow-y: auto;
+    background: #fff;
+  }
+
+  .tag-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .tag-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  /* 险种/店铺筛选标签（6px） */
+  .tag {
+    height: 32px;
+    background: #F4F6F9;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #222;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0 12px;
+  }
+  .tag.active {
+    background: #FFEFE7;
+    color: #FF6611;
+  }
+
+  /* 搜索弹层（按设计说明：直接包裹当前页面，不要从右到左划动） */
+  .search-overlay {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  .search-overlay.show { opacity: 1; pointer-events: auto; }
+
+  .search-overlay__head {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    border-bottom: 1px solid #E8ECF2;
+  }
+  /* 搜索输入框（6px） */
+  .search-input-wrap {
+    flex: 1;
+    height: 32px;
+    background: #F4F6F9;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .search-input-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: #222;
+  }
+  .search-input-wrap input::placeholder { color: #AFB3C2; }
+  .search-cancel {
+    color: #222;
+    font-size: 14px;
+    padding: 0 4px;
+  }
+  .search-clear {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #AFB3C2;
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  .search-empty {
+    padding: 80px 0;
+    text-align: center;
+  }
+  .search-empty__icon {
+    font-size: 64px;
+    opacity: 0.3;
+    margin-bottom: 12px;
+  }
+  .search-empty__text {
+    font-size: 15px;
+    color: #737587;
+  }
+  .search-keyword {
+    color: #FF5001;
+  }
+
+  /* 底部话术库弹窗（限在 .phone 容器内） */
+  .sheet-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .sheet-mask.show { opacity: 1; pointer-events: auto; }
+
+  /* 话术库底部弹窗顶部圆角（8px） */
+  .sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-radius: 8px 8px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.32, 1);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sheet.show { transform: translateY(0); }
+
+  .sheet__handle {
+    width: 36px;
+    height: 4px;
+    background: #E8ECF2;
+    border-radius: 2px;
+    margin: 8px auto 0;
+  }
+
+  .sheet__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+  }
+  .sheet__title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #222;
+  }
+  .sheet__more {
+    font-size: 13px;
+    color: #737587;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .sheet__tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sheet__tabs::-webkit-scrollbar { display: none; }
+  /* 话术分类 Tab（6px） */
+  .sheet__tab {
+    flex-shrink: 0;
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 6px;
+    background: #F4F6F9;
+    font-size: 13px;
+    color: #737587;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sheet__tab.active {
+    background: #FF6611;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .sheet__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 16px;
+    background: #F4F6F9;
+  }
+
+  /* 话术卡片（6px） */
+  .script-card {
+    background: #fff;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .script-card__text {
+    font-size: 14px;
+    line-height: 22px;
+    color: #222;
+    margin-bottom: 14px;
+    word-break: break-all;
+  }
+  .script-card__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .script-card__tag {
+    font-size: 11px;
+    color: #AFB3C2;
+  }
+  /* 复制按钮（4px） */
+  .script-card__copy {
+    height: 28px;
+    padding: 0 12px;
+    background: #FFEFE7;
+    color: #FF6611;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .script-card__copy:active { background: #FFE0CF; }
+
+  /* AI 对话弹层 */
+  .chat-overlay {
+    position: absolute;
+    inset: 0;
+    background: #F5F5F5;
+    z-index: 250;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+  .chat-overlay.show { transform: translateX(0); }
+  .chat-overlay__head {
+    background: #fff;
+    border-bottom: 1px solid #E8ECF2;
+  }
+  .chat-banner {
+    background: linear-gradient(90deg, #FFF5E6 0%, #FFFAF0 100%);
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #737587;
+    border-bottom: 1px solid #FFE0CF;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-banner__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FF6611;
+    flex-shrink: 0;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+  .chat-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 12px 12px;
+  }
+  .chat-msg {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .chat-msg.right {
+    flex-direction: row-reverse;
+  }
+  /* 头像（4px） */
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: #FF6611;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .chat-msg.right .chat-avatar { background: #508CEE; }
+  /* 对话气泡（6px） */
+  .chat-bubble {
+    max-width: 70%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 20px;
+    color: #222;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .chat-msg.right .chat-bubble {
+    background: #FF6611;
+    color: #fff;
+  }
+  .chat-time {
+    text-align: center;
+    font-size: 11px;
+    color: #AFB3C2;
+    margin: 4px 0 14px;
+  }
+  /* AI 洞察块（4px） */
+  .chat-summary {
+    background: #FFF5E6;
+    border: 1px dashed #FF6611;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #737587;
+    line-height: 18px;
+  }
+  .chat-summary strong {
+    color: #FF6611;
+    font-size: 13px;
+  }
+
+  /* Toast（4px，限在 .phone 内居中） */
+  .toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.78);
+    color: #fff;
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: 4px;
+    z-index: 999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .toast.show { opacity: 1; }
+
+  /* 详情弹窗 */
+  .detail-overlay {
+    position: absolute;
+    inset: 0;
+    background: #F5F5F5;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+  .detail-overlay.show { transform: translateX(0); }
+
+  /* 详情区块（6px） */
+  .detail-section {
+    background: #fff;
+    margin: 12px;
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .detail-section h4 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #222;
+  }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #F0F2F5;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row .label { color: #737587; }
+  .detail-row .value { color: #222; font-weight: 500; }
+
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 8px;
+  }
+  .timeline li {
+    position: relative;
+    padding-left: 16px;
+    padding-bottom: 14px;
+    font-size: 13px;
+  }
+  .timeline li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 8px;
+    height: 8px;
+    background: #FF6611;
+    border-radius: 50%;
+  }
+  .timeline li::after {
+    content: '';
+    position: absolute;
+    left: 3.5px;
+    top: 14px;
+    bottom: -2px;
+    width: 1px;
+    background: #E8ECF2;
+  }
+  .timeline li:last-child::after { display: none; }
+  .timeline .time { color: #AFB3C2; font-size: 12px; margin-right: 8px; }
+  .timeline .text { color: #222; }
+  .timeline .product { color: #508CEE; font-weight: 500; }
+
+  .detail-actions {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #E8ECF2;
+  }
+  .detail-actions .btn { height: 40px; font-size: 14px; }
+  .detail-actions .btn--solid {
+    background: #FF6611;
+    color: #fff;
+    border: none;
+  }
+  .detail-actions .btn--solid:active { background: #CC4E0A; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="app">
+  <!-- 状态栏 -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="right">
+      <span>📶</span>
+      <span>📶</span>
+      <span>🔋</span>
+    </span>
+  </div>
+
+  <!-- 页面：我的客户 -->
+  <div class="page page--customer" id="pageCustomer">
+
+  <!-- 导航栏 -->
+  <div class="navbar">
+    <span class="back"></span>
+    <span class="title">我的客户</span>
+    <span class="search" onclick="openSearch()">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/>
+        <path d="m21 21-4.3-4.3"/>
+      </svg>
+    </span>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="main">
+
+    <!-- 客户断点发现 -->
+    <div class="alert-card" onclick="showToast('查看断点客户列表')">
+      <div class="alert-card__inner">
+        <div class="alert-card__icon">
+          <svg viewBox="0 0 44 44" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="alertGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FF6611"/>
+                <stop offset="100%" stop-color="#E85757"/>
+              </linearGradient>
+              <linearGradient id="alertHead" x1="50%" y1="0%" x2="50%" y2="100%">
+                <stop offset="0%" stop-color="#FF8541"/>
+                <stop offset="100%" stop-color="#FF6611"/>
+              </linearGradient>
+            </defs>
+            <!-- 人形：头 -->
+            <circle cx="16" cy="14" r="5.5" fill="url(#alertHead)"/>
+            <!-- 人形：肩身 -->
+            <path d="M5 32 C 5 25, 10 22, 16 22 C 22 22, 27 25, 27 32 L 27 36 L 5 36 Z" fill="url(#alertGrad)"/>
+            <!-- 右上角断点警示圆 -->
+            <circle cx="33" cy="13" r="9" fill="#FFFFFF" stroke="#FFE0CF" stroke-width="1.5"/>
+            <!-- 断点折线：向下下抖走势线，右端有缺口 -->
+            <path d="M28.5 13 L31 11 L33.5 14 L36 10" stroke="#FF6611" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <!-- 断点提示点 -->
+            <circle cx="37" cy="10" r="1.6" fill="#FF6611"/>
+          </svg>
+        </div>
+        <div class="alert-card__content">
+          <div class="alert-card__title">客户断点发现</div>
+          <div class="alert-card__desc">
+            系统共发现<span class="num">8</span>个客户存在断点行为，可能错过跟进时机，建议尽快联系客户。
+          </div>
+        </div>
+        <div class="alert-card__btn">去跟进</div>
+      </div>
+    </div>
+
+    <!-- 店铺一级 Tab（横向滚动） -->
+    <div class="shop-tabs" id="shopTabs"></div>
+
+    <!-- 客户卡片列表 -->
+    <div id="customerList"></div>
+  </div>
+  </div><!-- /pageCustomer -->
+
+  <!-- 客户详情页（真实 UI） -->
+  <div class="profile-overlay" id="profileOverlay">
+    <div class="profile-overlay__head">
+      <span class="profile-overlay__back" onclick="closeProfile()">‹</span>
+      <span class="profile-overlay__title">客户详情</span>
+    </div>
+    <div class="profile-overlay__body">
+      <!-- 客户基本信息 -->
+      <div class="pd-section">
+        <div class="pd-base__top">
+          <div class="pd-base__name">
+            <span class="n">李依依</span>
+            <span class="female">♀</span>
+            <span class="tag-new">新客户</span>
+            <span class="age">31岁</span>
+          </div>
+          <div class="pd-base__profile" onclick="showToast('跳转客户画像')">客户画像<span class="arrow">›</span></div>
+        </div>
+        <div class="pd-base__bottom">
+          <span class="pd-base__bind">好车主是否绑车：<strong>是</strong></span>
+          <span class="pd-base__call" onclick="showToast('拨号中...')">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg>
+            打电话
+          </span>
+        </div>
+      </div>
+
+      <!-- 客户档案 -->
+      <div class="pd-section">
+        <h4>客户档案</h4>
+        <div class="pd-tabs">
+          <div class="pd-tab active">应续信息</div>
+          <div class="pd-tab">理赔信息<span class="red-dot"></span></div>
+          <div class="pd-tab">在保信息</div>
+        </div>
+        <div class="pd-stat">
+          <span>统计时间：T-60到T+60</span>
+          <span class="blue">只有应续信息有 ‹</span>
+        </div>
+        <div class="pd-policy">
+          <div class="pd-policy__left">
+            <span class="pd-policy__type">非车</span>
+            <div class="pd-policy__col"><span class="lbl">在保保单</span><span class="val">2</span></div>
+            <div class="pd-policy__col"><span class="lbl">在保保费(元)</span><span class="val">2381.7</span></div>
+          </div>
+          <span class="pd-policy__arrow">›</span>
+        </div>
+        <div class="pd-policy">
+          <div class="pd-policy__left">
+            <span class="pd-policy__type">车险</span>
+            <div class="pd-policy__col"><span class="lbl">在保保单</span><span class="val">888</span></div>
+            <div class="pd-policy__col"><span class="lbl">在保保费(元)</span><span class="val">2381.7</span></div>
+          </div>
+          <span class="pd-policy__arrow">›</span>
+        </div>
+      </div>
+
+      <!-- 客户断点 -->
+      <div class="pd-section">
+        <h4>客户断点</h4>
+        <div class="pd-break">
+          <span class="pd-break__tag">好车主</span>
+          <span class="pd-break__name">医无忧·0免赔百万医（王牌版）</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#AFB3C2;margin-top:8px;">
+          <span>2025-07-30 15:30</span>
+          <span>2025-07-30 15:30</span>
+        </div>
+        <div class="pd-collapse">˅</div>
+      </div>
+
+      <!-- 客户权益提醒 -->
+      <div class="pd-section">
+        <h4>客户权益提醒</h4>
+        <div class="pd-card-row">
+          <span>2张卡券未使用</span>
+        </div>
+        <div class="pd-coupon">
+          <span class="pd-coupon__tag purple">好生活</span>
+          <div class="pd-coupon__main">
+            <span class="pd-coupon__name">健康无忧大礼包</span>
+            <span class="pd-coupon__sub">未查看 · 到期时间 2026-04-15</span>
+          </div>
+          <span class="pd-coupon__btn primary">提醒使用</span>
+        </div>
+        <div class="pd-collapse">˅</div>
+        <div class="pd-card-row" style="margin-top:14px;border-top:1px solid #F0F2F5;padding-top:12px;">
+          <span>3个礼包未领取</span>
+          <span class="blue-link">🎂 生日礼包·icon补充<span style="margin-left:2px">→</span></span>
+        </div>
+        <div class="pd-coupon">
+          <div class="pd-coupon__icon" style="background:#FFE9DA;">📅</div>
+          <div class="pd-coupon__main">
+            <span class="pd-coupon__name">每月礼包</span>
+            <span class="pd-coupon__sub"><span class="pd-coupon__tag red" style="display:inline-block;margin-right:4px;font-size:10px;padding:1px 5px;">好车主</span></span>
+          </div>
+          <span class="pd-coupon__btn disabled">已领取</span>
+        </div>
+        <div class="pd-coupon">
+          <div class="pd-coupon__icon" style="background:#FFE6E6;">🎁</div>
+          <div class="pd-coupon__main">
+            <span class="pd-coupon__name">体验卡礼包</span>
+            <span class="pd-coupon__sub"><span class="pd-coupon__tag purple" style="display:inline-block;margin-right:4px;font-size:10px;padding:1px 5px;">好生活</span></span>
+          </div>
+          <span class="pd-coupon__btn disabled">已领取</span>
+        </div>
+        <div class="pd-coupon">
+          <div class="pd-coupon__icon" style="background:#E8F0FF;">🎁</div>
+          <div class="pd-coupon__main">
+            <span class="pd-coupon__name">通用礼包</span>
+            <span class="pd-coupon__sub"><span class="pd-coupon__tag blue" style="display:inline-block;margin-right:4px;font-size:10px;padding:1px 5px;">企业宝</span></span>
+          </div>
+          <span class="pd-coupon__btn primary">提醒领取</span>
+        </div>
+      </div>
+
+      <!-- 客户活跃轨迹 -->
+      <div class="pd-section" style="margin-bottom:20px;">
+        <h4>客户活跃轨迹</h4>
+        <div class="pd-tabs">
+          <div class="pd-tab active">全部</div>
+          <div class="pd-tab">产品</div>
+          <div class="pd-tab">服务</div>
+          <div class="pd-tab">活动</div>
+          <div class="pd-tab">文章</div>
+        </div>
+        <div class="pd-trace">
+          <span class="label red">断点·好车主</span>
+          <span class="time">2025-03-03 18:00:00</span>
+          <div class="body">访问产品<span class="product">《XXXX》</span>，停留10s，未支付成功</div>
+        </div>
+        <div class="pd-trace">
+          <span class="label purple">文章·好生活</span>
+          <span class="time">2025-03-03 18:00:00</span>
+          <div class="body">访问文章<span class="product">《XXXX》</span>，停留10s。</div>
+        </div>
+        <div class="pd-trace">
+          <span class="label gray">文章</span>
+          <span class="time">2025-03-03 18:00:00</span>
+          <div class="body">访问文章<span class="product">《XXXXXXXXXXX</span>，停留10s。限展示1行...</div>
+        </div>
+        <div class="pd-collapse">˅</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 页面：AI顾问（默认隐藏） -->
+  <div class="page page--ai hidden" id="pageAi">
+    <div class="navbar">
+      <span class="back" style="visibility:hidden;"></span>
+      <span class="title">微店客户消息</span>
+      <span class="search" onclick="showToast('设置')">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </span>
+    </div>
+    <div class="main" style="padding:0 0 80px;">
+      <!-- 店铺 Tab -->
+      <div class="ai-shop-tabs">
+        <span class="ai-shop-tab active">全部店铺</span>
+        <span class="ai-shop-tab">唐鹏的小店铺</span>
+        <span class="ai-shop-tab">唐鹏的个人微店6...</span>
+      </div>
+      <!-- 筛选 -->
+      <div class="ai-filter">
+        <span class="ai-filter__pill active">全部</span>
+        <span class="ai-filter__pill">未读</span>
+      </div>
+      <!-- 客户消息列表 -->
+      <div class="ai-msg">
+        <div class="ai-msg__avatar" style="background:#3DA9FF;">🚗</div>
+        <div class="ai-msg__main">
+          <div class="ai-msg__head">
+            <span class="ai-msg__name">唐鹏</span>
+            <span class="ai-msg__time">昨天 11:15</span>
+          </div>
+          <div class="ai-msg__sub"><span class="card">【卡片】</span>· 唐鹏的小店铺</div>
+          <div class="ai-msg__actions">
+            <button class="ai-msg__btn gray" onclick="showToast('查看对话')">查看对话</button>
+            <button class="ai-msg__btn primary" onclick="showToast('立即联系')">立即联系</button>
+          </div>
+        </div>
+      </div>
+      <div class="ai-msg">
+        <div class="ai-msg__avatar" style="background:#FFE0CC;">🦊</div>
+        <div class="ai-msg__main">
+          <div class="ai-msg__head">
+            <span class="ai-msg__name">杜贵旺</span>
+            <span class="ai-msg__time">5月20日</span>
+          </div>
+          <div class="ai-msg__sub"><span class="card">【卡片】</span>· 唐鹏的店铺</div>
+          <div class="ai-msg__actions">
+            <button class="ai-msg__btn gray" onclick="showToast('查看对话')">查看对话</button>
+            <button class="ai-msg__btn primary" onclick="showToast('立即联系')">立即联系</button>
+          </div>
+        </div>
+      </div>
+      <div class="ai-msg">
+        <div class="ai-msg__avatar" style="background:#E8E8E8;">👔</div>
+        <div class="ai-msg__main">
+          <div class="ai-msg__head">
+            <span class="ai-msg__name">用抷16832951</span>
+            <span class="ai-msg__time">5月18日</span>
+          </div>
+          <div class="ai-msg__sub"><span class="card">【卡片】</span>· 唐鹏的小店铺</div>
+          <div class="ai-msg__actions">
+            <button class="ai-msg__btn gray" onclick="showToast('查看对话')">查看对话</button>
+            <button class="ai-msg__btn primary" onclick="showToast('立即联系')">立即联系</button>
+          </div>
+        </div>
+      </div>
+      <div class="ai-end">—— 没有更多了 ——</div>
+    </div>
+  </div>
+
+  <!-- 底部 Tab（采用 Figma 设计稿风格） -->
+  <div class="tabbar">
+    <!-- 首页（使用设计稿第 3 个图标） -->
+    <div class="tabbar__item" id="tabHome" onclick="switchTab('home')">
+      <span class="icon">
+        <svg class="icon--default" viewBox="0 0 38 39" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_home_d" x1="19" y1="0" x2="19" y2="38.4974" gradientUnits="userSpaceOnUse"><stop stop-color="#D0D1D4"/><stop offset="1" stop-color="#DFE0E3"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M1.28152 10.6881L17.5315 0.424906C18.4285 -0.141635 19.5715 -0.141635 20.4685 0.424906L36.7185 10.6881C37.5163 11.1919 38 12.0696 38 13.0132V35.7474C38 37.2662 36.7688 38.4974 35.25 38.4974H2.75C1.23122 38.4974 0 37.2662 0 35.7474V13.0132C0 12.0696 0.483749 11.1919 1.28152 10.6881Z" fill="url(#tg_home_d)"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M27 28.4141V29.5808C27 30.087 26.5896 30.4974 26.0833 30.4974L11.9167 30.4974C11.4104 30.4974 11 30.087 11 29.5808V28.4141C11 27.9078 11.4104 27.4974 11.9167 27.4974L26.0833 27.4974C26.5896 27.4974 27 27.9078 27 28.4141Z" fill="#fff"/>
+        </svg>
+        <svg class="icon--active" viewBox="0 0 38 39" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_home_a" x1="19" y1="0" x2="19" y2="38.4974" gradientUnits="userSpaceOnUse"><stop stop-color="#FF6611"/><stop offset="1" stop-color="#FF8900"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M1.28152 10.6881L17.5315 0.424906C18.4285 -0.141635 19.5715 -0.141635 20.4685 0.424906L36.7185 10.6881C37.5163 11.1919 38 12.0696 38 13.0132V35.7474C38 37.2662 36.7688 38.4974 35.25 38.4974H2.75C1.23122 38.4974 0 37.2662 0 35.7474V13.0132C0 12.0696 0.483749 11.1919 1.28152 10.6881Z" fill="url(#tg_home_a)"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M27 28.4141V29.5808C27 30.087 26.5896 30.4974 26.0833 30.4974L11.9167 30.4974C11.4104 30.4974 11 30.087 11 29.5808V28.4141C11 27.9078 11.4104 27.4974 11.9167 27.4974L26.0833 27.4974C26.5896 27.4974 27 27.9078 27 28.4141Z" fill="#fff"/>
+        </svg>
+      </span>
+      <span class="label">首页</span>
+    </div>
+
+    <!-- 店铺 -->
+    <div class="tabbar__item" id="tabShop" onclick="switchTab('shop')">
+      <span class="icon">
+        <svg class="icon--default" viewBox="0 0 40 38" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_shop_d" x1="20" y1="0" x2="20" y2="38" gradientUnits="userSpaceOnUse"><stop stop-color="#D0D1D4"/><stop offset="1" stop-color="#DFE0E3"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M13.0783 22.1166C13.3983 21.8474 13.8582 21.8474 14.1582 22.1166C15.758 23.5662 17.8177 24.3946 19.9974 24.3946C22.1971 24.3946 24.2369 23.5662 25.8367 22.1373C26.1366 21.8681 26.6566 21.8888 26.9565 22.158C29.3562 24.3324 32.7958 25.0986 36.1953 23.7526V34.1068C36.1953 36.509 34.2556 38 31.9359 38H8.09895C5.77925 38 3.99948 36.509 3.99948 34.1068V23.7319C3.99948 23.7733 4.19946 23.8354 4.33944 23.8768C7.55902 24.9744 10.7786 24.1875 13.0783 22.1166ZM31.3559 0C32.6558 0 33.8356 0.786921 34.4155 1.98801L39.6949 13.1499L39.7749 13.3984C39.8948 13.8954 39.9748 14.3717 39.9948 14.8894C40.1348 18.327 37.4152 21.9095 34.1556 22.5515C31.276 23.1106 28.6163 21.8681 27.0365 19.7351C26.6965 19.2796 26.0566 19.3003 25.7167 19.7351C24.3968 21.5161 22.3171 22.655 19.9974 22.655C17.6777 22.655 15.598 21.5161 14.2782 19.7351C13.9382 19.3003 13.2783 19.3003 12.9583 19.7351C11.2785 22.0131 8.35892 23.2556 5.23932 22.3858C2.09973 21.4954 0 18.5341 0 15.1586C0 14.558 0.0599922 14.0403 0.219972 13.4191C0.239969 13.3569 0.279964 13.2534 0.299961 13.1913L5.49929 1.98801C6.05922 0.766212 7.25906 0 8.55889 0H31.3559Z" fill="url(#tg_shop_d)"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M10.5833 35.5H9.41667C8.91041 35.5 8.5 35.0896 8.5 34.5833V27.4167C8.5 26.9104 8.91041 26.5 9.41667 26.5H10.5833C11.0896 26.5 11.5 26.9104 11.5 27.4167L11.5 34.5833C11.5 35.0896 11.0896 35.5 10.5833 35.5Z" fill="#fff"/>
+        </svg>
+        <svg class="icon--active" viewBox="0 0 40 38" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_shop_a" x1="20" y1="0" x2="20" y2="38" gradientUnits="userSpaceOnUse"><stop stop-color="#FF6611"/><stop offset="1" stop-color="#FF8900"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M13.0783 22.1166C13.3983 21.8474 13.8582 21.8474 14.1582 22.1166C15.758 23.5662 17.8177 24.3946 19.9974 24.3946C22.1971 24.3946 24.2369 23.5662 25.8367 22.1373C26.1366 21.8681 26.6566 21.8888 26.9565 22.158C29.3562 24.3324 32.7958 25.0986 36.1953 23.7526V34.1068C36.1953 36.509 34.2556 38 31.9359 38H8.09895C5.77925 38 3.99948 36.509 3.99948 34.1068V23.7319C3.99948 23.7733 4.19946 23.8354 4.33944 23.8768C7.55902 24.9744 10.7786 24.1875 13.0783 22.1166ZM31.3559 0C32.6558 0 33.8356 0.786921 34.4155 1.98801L39.6949 13.1499L39.7749 13.3984C39.8948 13.8954 39.9748 14.3717 39.9948 14.8894C40.1348 18.327 37.4152 21.9095 34.1556 22.5515C31.276 23.1106 28.6163 21.8681 27.0365 19.7351C26.6965 19.2796 26.0566 19.3003 25.7167 19.7351C24.3968 21.5161 22.3171 22.655 19.9974 22.655C17.6777 22.655 15.598 21.5161 14.2782 19.7351C13.9382 19.3003 13.2783 19.3003 12.9583 19.7351C11.2785 22.0131 8.35892 23.2556 5.23932 22.3858C2.09973 21.4954 0 18.5341 0 15.1586C0 14.558 0.0599922 14.0403 0.219972 13.4191C0.239969 13.3569 0.279964 13.2534 0.299961 13.1913L5.49929 1.98801C6.05922 0.766212 7.25906 0 8.55889 0H31.3559Z" fill="url(#tg_shop_a)"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M10.5833 35.5H9.41667C8.91041 35.5 8.5 35.0896 8.5 34.5833V27.4167C8.5 26.9104 8.91041 26.5 9.41667 26.5H10.5833C11.0896 26.5 11.5 26.9104 11.5 27.4167L11.5 34.5833C11.5 35.0896 11.0896 35.5 10.5833 35.5Z" fill="#fff"/>
+        </svg>
+      </span>
+      <span class="label">店铺</span>
+    </div>
+
+    <!-- AI 顾问（使用设计稿第 1 个图标） -->
+    <div class="tabbar__item" id="tabAi" onclick="switchTab('ai')">
+      <span class="icon">
+        <svg class="icon--default" viewBox="0 0 38 42" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_ai_d" x1="19" y1="0" x2="19" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#D0D1D4"/><stop offset="1" stop-color="#DFE0E3"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6946 20.901L13.7771 20.9868C16.547 23.8282 21.1878 25.9754 26.2784 26.9702L26.6172 27.0346L27.2886 27.1511C27.6222 27.2053 27.9524 27.2533 28.2788 27.2951L28.9264 27.3702C32.0391 27.6939 34.768 27.426 36.7084 26.4916C36.2211 28.4236 34.7997 29.9519 32.9585 30.4782L32.8779 30.4986L32.869 30.528L32.5379 30.7422C30.0699 32.3705 26.7184 33.4201 23.4635 33.8209L22.9762 33.8762L22.9364 33.734C22.8161 33.3012 22.4221 33.0018 21.9729 33.0018H17.4928C17.0437 33.0018 16.6496 33.3012 16.5293 33.734L16.0853 35.3315C16.061 35.4187 16.0488 35.5088 16.0488 35.5993C16.0488 36.1516 16.4965 36.5993 17.0488 36.5993H20.6545C20.9815 36.6045 21.3039 36.605 21.6227 36.6004L22.417 36.5993C22.5075 36.5993 22.5976 36.587 22.6848 36.5628C25.6118 36.4112 28.2988 35.7675 31.392 34.3054C28.9048 38.8597 24.3461 41.8782 19.2041 41.9964L18.8906 42C12.3806 42 6.76038 37.3506 4.98297 30.8044L4.90588 30.5118L4.78702 30.4802C2.82068 29.9122 1.31531 28.1537 0.966987 25.977C2.61238 26.545 4.76713 26.3845 7.00482 25.587L7.34025 25.4631C9.79073 24.5256 12.0273 22.9628 13.5757 21.0533L13.6946 20.901ZM19.2389 0C22.5466 0 25.4128 1.89064 26.8157 4.65022C33.2741 7.76241 37.7528 14.5025 37.7528 22.003C37.3496 28.7633 16.6642 24.8908 13.5015 17.0936C11.6893 23.1781 0.699142 26.9979 0 22.003C0 14.1367 4.92622 7.10682 11.896 4.22145C13.3682 1.6967 16.1054 0 19.2389 0Z" fill="url(#tg_ai_d)"/>
+        </svg>
+        <svg class="icon--active" viewBox="0 0 38 42" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_ai_a" x1="19" y1="0" x2="19" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#FF6611"/><stop offset="1" stop-color="#FF8900"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6946 20.901L13.7771 20.9868C16.547 23.8282 21.1878 25.9754 26.2784 26.9702L26.6172 27.0346L27.2886 27.1511C27.6222 27.2053 27.9524 27.2533 28.2788 27.2951L28.9264 27.3702C32.0391 27.6939 34.768 27.426 36.7084 26.4916C36.2211 28.4236 34.7997 29.9519 32.9585 30.4782L32.8779 30.4986L32.869 30.528L32.5379 30.7422C30.0699 32.3705 26.7184 33.4201 23.4635 33.8209L22.9762 33.8762L22.9364 33.734C22.8161 33.3012 22.4221 33.0018 21.9729 33.0018H17.4928C17.0437 33.0018 16.6496 33.3012 16.5293 33.734L16.0853 35.3315C16.061 35.4187 16.0488 35.5088 16.0488 35.5993C16.0488 36.1516 16.4965 36.5993 17.0488 36.5993H20.6545C20.9815 36.6045 21.3039 36.605 21.6227 36.6004L22.417 36.5993C22.5075 36.5993 22.5976 36.587 22.6848 36.5628C25.6118 36.4112 28.2988 35.7675 31.392 34.3054C28.9048 38.8597 24.3461 41.8782 19.2041 41.9964L18.8906 42C12.3806 42 6.76038 37.3506 4.98297 30.8044L4.90588 30.5118L4.78702 30.4802C2.82068 29.9122 1.31531 28.1537 0.966987 25.977C2.61238 26.545 4.76713 26.3845 7.00482 25.587L7.34025 25.4631C9.79073 24.5256 12.0273 22.9628 13.5757 21.0533L13.6946 20.901ZM19.2389 0C22.5466 0 25.4128 1.89064 26.8157 4.65022C33.2741 7.76241 37.7528 14.5025 37.7528 22.003C37.3496 28.7633 16.6642 24.8908 13.5015 17.0936C11.6893 23.1781 0.699142 26.9979 0 22.003C0 14.1367 4.92622 7.10682 11.896 4.22145C13.3682 1.6967 16.1054 0 19.2389 0Z" fill="url(#tg_ai_a)"/>
+        </svg>
+      </span>
+      <span class="label">AI顾问</span>
+    </div>
+
+    <!-- 我的客户 -->
+    <div class="tabbar__item active" id="tabCustomer" onclick="switchTab('customer')">
+      <span class="icon">
+        <svg class="icon--default" viewBox="0 0 40 42" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_my_d" x1="20" y1="0" x2="20" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#D0D1D4"/><stop offset="1" stop-color="#DFE0E3"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M0.428052 29.9236C2.12878 27.404 8.86238 23 20 23C31.1849 23 37.9283 27.4415 39.5933 29.9555C40 31 40 32.3271 40 32.9907C40 34.9938 40 36.9969 40 39C40 40.6569 38.6569 42 37 42H3C1.34315 42 0 40.6569 0 39C0 37 0 35 0 33C0 31.4634 0.143664 30.3449 0.428052 29.9236ZM19.4388 0H20.5612C25.5318 0 29.5612 4.02944 29.5612 9C29.5612 9.14276 29.5578 9.28549 29.551 9.42809L29.4281 12.0102C29.1884 17.0428 25.0383 21 20 21C14.9616 21 10.8116 17.0428 10.5719 12.0102L10.4489 9.42809C10.2125 4.46315 14.0457 0.246612 19.0107 0.0101867C19.1533 0.00339646 19.296 0 19.4388 0Z" fill="url(#tg_my_d)"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 28H20.5C21.0523 28 21.5 28.4477 21.5 29V36C21.5 36.5523 21.0523 37 20.5 37H19.5C18.9477 37 18.5 36.5523 18.5 36V29C18.5 28.4477 18.9477 28 19.5 28Z" fill="#fff"/>
+        </svg>
+        <svg class="icon--active" viewBox="0 0 40 42" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="tg_my_a" x1="20" y1="0" x2="20" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#FF6611"/><stop offset="1" stop-color="#FF8900"/></linearGradient></defs>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M0.428052 29.9236C2.12878 27.404 8.86238 23 20 23C31.1849 23 37.9283 27.4415 39.5933 29.9555C40 31 40 32.3271 40 32.9907C40 34.9938 40 36.9969 40 39C40 40.6569 38.6569 42 37 42H3C1.34315 42 0 40.6569 0 39C0 37 0 35 0 33C0 31.4634 0.143664 30.3449 0.428052 29.9236ZM19.4388 0H20.5612C25.5318 0 29.5612 4.02944 29.5612 9C29.5612 9.14276 29.5578 9.28549 29.551 9.42809L29.4281 12.0102C29.1884 17.0428 25.0383 21 20 21C14.9616 21 10.8116 17.0428 10.5719 12.0102L10.4489 9.42809C10.2125 4.46315 14.0457 0.246612 19.0107 0.0101867C19.1533 0.00339646 19.296 0 19.4388 0Z" fill="url(#tg_my_a)"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 28H20.5C21.0523 28 21.5 28.4477 21.5 29V36C21.5 36.5523 21.0523 37 20.5 37H19.5C18.9477 37 18.5 36.5523 18.5 36V29C18.5 28.4477 18.9477 28 19.5 28Z" fill="#fff"/>
+        </svg>
+      </span>
+      <span class="label">我的客户</span>
+    </div>
+  </div>
+
+  <!-- 店铺下拉弹层已移除（改为一级 Tab） -->
+
+  <!-- 险种筛选已移除 -->
+
+  <!-- 搜索弹层 -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="statusbar">
+      <span>9:41</span>
+      <span class="right"><span>📶</span><span>📶</span><span>🔋</span></span>
+    </div>
+    <div class="search-overlay__head">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#AFB3C2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="搜索姓名/店铺" oninput="onSearchInput(this.value)" enterkeyhint="search">
+        <span class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</span>
+      </div>
+      <span class="search-cancel" onclick="closeSearch()">取消</span>
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">
+        <svg class="search-empty__icon" viewBox="0 0 64 64" width="64" height="64" fill="none">
+          <rect x="14" y="10" width="32" height="42" rx="3" stroke="#D8DAE3" stroke-width="2"/>
+          <path d="M21 22 H39 M21 30 H39 M21 38 H32" stroke="#D8DAE3" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="search-empty__text">请输入姓名或店铺名搜索</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 营销素材底部弹窗 -->
+  <div class="sheet-mask" id="scriptsMask" onclick="closeScripts(event)">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet__handle"></div>
+      <div class="sheet__head">
+        <span class="sheet__title">营销策略</span>
+      </div>
+      <div class="sheet__tabs" id="scriptTabs"></div>
+      <div class="sheet__body" id="scriptList"></div>
+    </div>
+  </div>
+
+  <!-- AI 对话弹层 -->
+  <div class="chat-overlay" id="chatOverlay">
+    <div class="chat-overlay__head">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="right"><span>📶</span><span>📶</span><span>🔋</span></span>
+      </div>
+      <div class="navbar">
+        <span class="back" onclick="closeChat()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </span>
+        <span class="title" id="chatTitle">客户对话</span>
+        <span class="search" onclick="showToast('对话设置')">⋯</span>
+      </div>
+    </div>
+    <div class="chat-banner">
+      <span class="chat-banner__dot"></span>
+      <span>AI 助手已自动跟进 · 共 <strong id="chatTurns">0</strong> 轮对话</span>
+    </div>
+    <div class="chat-list" id="chatList"></div>
+  </div>
+
+  <!-- 行为时间轴底部弹窗（点击产品名触发） -->
+  <div class="sheet-mask" id="timelineMask" onclick="closeTimeline(event)">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet__handle"></div>
+      <div class="sheet__head">
+        <span class="sheet__title" id="timelineTitle">客户行为时间轴</span>
+        <span class="sheet__more" onclick="closeTimeline(true)">关闭 ✕</span>
+      </div>
+      <div class="sheet__body" style="background:#fff;padding:0 16px 24px;">
+        <ul class="timeline" id="timelineList" style="padding-top:8px;"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情弹层已移除：点击卡片不跳详情页，点「访问了xx」行调起时间轴底部弹窗 -->
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ============= Mock 数据 =============
+const allShops = ['唐鹏的个人店铺', '店铺名称1', '店铺名称2', '店铺名称3', '店铺名称4'];
+// 险种列表已移除
+
+const customers = [
+  {
+    id: 1,
+    name: '张凤华',
+    phone: '135****2931',
+    recent: '5分钟前',
+    product: '《平安少儿综合2024》',
+    moreCount: 3,
+    visitCount: 3,
+    browseCount: 3,
+    stayTime: '8分20秒',
+    shop: '唐鹏的个人店铺',
+    type: '健康',
+    timeline: [
+      { time: '5分钟前', text: '浏览了 ', product: '《平安少儿综合2024》', extra: ' (停留 3分20秒)' },
+      { time: '12分钟前', text: '查看了 ', product: '《平安重疾险》', extra: '' },
+      { time: '15分钟前', text: '查看了 ', product: '《意外险全家桶》', extra: '' },
+      { time: '昨天 14:32', text: '进入店铺', product: '', extra: '' }
+    ]
+  },
+  {
+    id: 2,
+    name: '刘子敬',
+    phone: '139****5678',
+    recent: '12分钟前',
+    product: '《平安重疾险》',
+    moreCount: 2,
+    visitCount: 5,
+    browseCount: 8,
+    stayTime: '15分10秒',
+    shop: '唐鹏的个人店铺',
+    type: '健康',
+    timeline: [
+      { time: '12分钟前', text: '反复查看 ', product: '《平安重疾险》', extra: ' (停留 8分钟)' },
+      { time: '昨天', text: '查看了 ', product: '《医疗险》', extra: '' },
+      { time: '3天前', text: '从朋友圈进入店铺', product: '', extra: '' }
+    ]
+  },
+  {
+    id: 3,
+    name: '陈思雨',
+    phone: '186****0011',
+    recent: '1小时前',
+    product: '《意外险全家桶》',
+    moreCount: 1,
+    visitCount: 2,
+    browseCount: 4,
+    stayTime: '5分45秒',
+    shop: '店铺名称1',
+    type: '意外',
+    timeline: [
+      { time: '1小时前', text: '浏览了 ', product: '《意外险全家桶》', extra: '' },
+      { time: '1小时前', text: '查看了 ', product: '《旅行意外险》', extra: '' },
+      { time: '昨天', text: '进入店铺', product: '', extra: '' }
+    ]
+  },
+  {
+    id: 4,
+    name: '王建国',
+    phone: '152****3344',
+    recent: '3小时前',
+    product: '《家财保障计划》',
+    moreCount: 0,
+    visitCount: 1,
+    browseCount: 2,
+    stayTime: '3分20秒',
+    shop: '店铺名称2',
+    type: '财产',
+    timeline: [
+      { time: '3小时前', text: '浏览了 ', product: '《家财保障计划》', extra: '' },
+      { time: '3小时前', text: '进入店铺', product: '', extra: '' }
+    ]
+  },
+  {
+    id: 5,
+    name: '李雨桐',
+    phone: '138****6677',
+    recent: '20分钟前',
+    product: '《平安福2024》',
+    moreCount: 2,
+    visitCount: 4,
+    browseCount: 6,
+    stayTime: '12分30秒',
+    shop: '唐鹏的个人店铺',
+    type: '健康',
+    timeline: [
+      { time: '20分钟前', text: '浏览了 ', product: '《平安福2024》', extra: ' (停留 5分钟)' },
+      { time: '35分钟前', text: '查看了 ', product: '《重疾险全家桶》', extra: '' },
+      { time: '1小时前', text: '进入店铺', product: '', extra: '' }
+    ]
+  },
+  {
+    id: 6,
+    name: '赵天磊',
+    phone: '137****8899',
+    recent: '40分钟前',
+    product: '《百万医疗险》',
+    moreCount: 1,
+    visitCount: 6,
+    browseCount: 9,
+    stayTime: '18分45秒',
+    shop: '唐鹏的个人店铺',
+    type: '医疗',
+    timeline: [
+      { time: '40分钟前', text: '反复查看 ', product: '《百万医疗险》', extra: ' (停留 10分钟)' },
+      { time: '昨天', text: '咨询了 ', product: '《e生保》', extra: '' },
+      { time: '前天', text: '从微信群进入店铺', product: '', extra: '' }
+    ]
+  }
+];
+
+// ============= 状态 =============
+let selectedShop = '唐鹏的个人店铺';
+let openedFilter = null;
+
+// 话术库分类 + 内容
+const scriptCategories = ['开场白', '少儿险', '医疗险', '促成交', '节日问候'];
+const scriptsByCategory = {
+  '开场白': [
+    { text: '您好，我是您的专属保险顾问，看您最近在浏览我们的产品，请问有什么我可以帮您的吗？', tag: '常用 · 推荐' },
+    { text: '您好~ 看到您对保险产品比较关注，方便聊几句吗？我可以根据您的家庭情况推荐最合适的方案。', tag: '友好型' },
+    { text: '您好，感谢您关注我们的产品！我整理了一份保障规划清单，需要发给您参考吗？', tag: '资料型' }
+  ],
+  '少儿险': [
+    { text: '您好，看到您对少儿保险比较关注，给孩子提前做好保障规划真的很有必要，我这边有一款非常适合的产品，想跟您简单分享一下~', tag: '推荐 · 高转化' },
+    { text: '少儿险建议「重疾 + 医疗 + 意外」三件套搭配，预算 2000-3000/年就能搞定基础保障，我可以为您定制方案。', tag: '专业型' },
+    { text: '《平安少儿综合 2024》是我们今年的新品，0 免赔额、最高 200 万保额，针对 0-17 岁孩子非常划算。', tag: '产品介绍' }
+  ],
+  '医疗险': [
+    { text: '医疗险建议百万医疗 + 中端医疗组合，覆盖小病大病全场景。最近《平安 e 生保》有续保优惠，要了解一下吗？', tag: '推荐' },
+    { text: '担心免赔额太高？我们这款 0 免赔的产品可能更适合您，发您看看？', tag: '异议引导' }
+  ],
+  '促成交': [
+    { text: '我看您之前对这款产品停留时间比较长，有什么疑问可以直接告诉我，今天下单还能享受首年立减 200 元的优惠~', tag: '促单 · 高转化' },
+    { text: '为您预留的优惠名额今晚 24 点截止，要不今天先帮您锁定？后续随时可以调整方案。', tag: '紧迫感' },
+    { text: '理解您的顾虑，保险确实需要慎重选择。我们 30 天犹豫期内可以无条件退保，零风险体验，先了解再决定也来得及。', tag: '化解顾虑' },
+    { text: '保费贵不贵其实要看保额。我们这款产品平均下来一天不到 5 元，能换 100 万保障，性价比还是很高的。', tag: '价格异议' }
+  ],
+  '节日问候': [
+    { text: '【新年快乐】祝您和家人新春安康、阖家幸福！新的一年也愿您所爱之人都能被温柔守护~', tag: '春节' },
+    { text: '【中秋安康】月圆人团圆，愿您和家人健康平安、相伴长久。我们也会一直在您身边，守护这份团圆。', tag: '中秋' },
+    { text: '【母亲节快乐】感谢妈妈一路的爱与守护，今天也想用一份保障，把您的爱继续传递下去~', tag: '母亲节' }
+  ]
+};
+let currentScriptCategory = '开场白'; // 默认选中
+let currentChatCustomer = null;
+
+// AI 对话历史（每客户）
+const aiChatsByCustomerId = {
+  1: {
+    turns: 6,
+    messages: [
+      { type: 'date', text: '今天 09:24' },
+      { type: 'summary', html: '<strong>AI 客户洞察：</strong>客户多次浏览少儿综合保险（停留 8分20秒），关注「保额、免赔额」，建议主推《平安少儿综合 2024》。' },
+      { side: 'left', text: '您好~ 看到您今天又来逛店铺啦，是在为孩子挑选保险吗？我可以帮您参考下哦 😊' },
+      { side: 'right', text: '是的，孩子刚 5 岁，想了解下重疾相关的。' },
+      { side: 'left', text: '少儿重疾建议优先关注：①保额是否够用（建议 50 万起）②是否含轻中症 ③是否带豁免。我们这款《平安少儿综合 2024》三项都覆盖了，要发您看看吗？' },
+      { side: 'right', text: '好啊，发我看看' },
+      { side: 'left', text: '已发送 📄 《平安少儿综合 2024》产品手册，您可以重点看第 3 页的保障责任和第 7 页的费率表，有疑问随时问我~' },
+      { type: 'date', text: '今天 14:32' },
+      { side: 'right', text: '我看了下，这个免赔额是 0 免赔吗？' },
+      { side: 'left', text: '是的！住院医疗 0 免赔额，意外门诊 100 元起赔，整体免赔门槛非常低。这也是这款产品最受家长好评的点之一 ✨' }
+    ]
+  },
+  2: {
+    turns: 4,
+    messages: [
+      { type: 'date', text: '今天 10:15' },
+      { type: 'summary', html: '<strong>AI 客户洞察：</strong>客户反复查看《平安重疾险》（共 3 次），疑似在做产品对比。建议主动询问竞品需求。' },
+      { side: 'left', text: '您好，看您今天反复查看我们的重疾险，是有什么疑问吗？或者是在和其他产品做对比？' },
+      { side: 'right', text: '是的，我对比了一下另外一家，他们的保费便宜一些。' },
+      { side: 'left', text: '可以理解。重疾险其实差异不仅在保费，还要看：保障期限、轻中症赔付次数、保额递增等。方便把您对比的产品名告诉我吗？我帮您做个详细对比表。' }
+    ]
+  },
+  3: {
+    turns: 2,
+    messages: [
+      { type: 'date', text: '今天 10:30' },
+      { side: 'left', text: '您好，看您在关注意外险，请问是给自己还是家人配置呢？' },
+      { side: 'right', text: '想给全家配置一份。' }
+    ]
+  },
+  4: {
+    turns: 1,
+    messages: [
+      { type: 'date', text: '今天 08:30' },
+      { side: 'left', text: '您好，欢迎光临！需要了解家庭财产保险的话，我可以帮您参考~' }
+    ]
+  }
+};
+
+// ============= 渲染 =============
+function renderCustomers(list = customers) {
+  const html = list.map(c => `
+    <div class="customer-card" onclick="openProfile(${c.id})">
+      <div class="customer-card__title-row">
+        <div class="customer-card__name">
+          ${c.name}<span class="phone">${c.phone}</span><span class="customer-card__phone-icon" onclick="event.stopPropagation();callCustomer('${c.phone}')"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg></span>
+        </div>
+      </div>
+      <div class="customer-card__activity" onclick="event.stopPropagation();openTimeline(${c.id})">
+        <span class="customer-card__activity-text">
+          ${c.recent}访问了 <span class="product">${c.product}</span>${c.moreCount > 0 ? `<span class="more">等${c.moreCount}个</span>` : ''}<span class="customer-card__activity-arrow">›</span>
+        </span>
+      </div>
+      <div class="customer-card__stats">
+        <span>访问 <strong>${c.visitCount}</strong>次</span>
+        <span>浏览 <strong>${c.browseCount}</strong>次</span>
+        <span>停留 <strong>${c.stayTime}</strong></span>
+      </div>
+      <div class="customer-card__actions" onclick="event.stopPropagation()">
+        <button class="btn" onclick="openChat(${c.id})">聊天记录</button>
+        <button class="btn" onclick="openScripts()">营销策略</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('customerList').innerHTML = html || '<div style="text-align:center;color:#AFB3C2;padding:60px 0;font-size:14px;">暂无符合条件的客户</div>';
+}
+
+function renderShopTabs() {
+  document.getElementById('shopTabs').innerHTML = allShops.map(shop => `
+    <div class="shop-tab ${shop === selectedShop ? 'active' : ''}" onclick="selectShop('${shop.replace(/'/g, "\\'")}')">
+      ${shop}
+    </div>
+  `).join('');
+}
+
+// renderTypeTags 已移除
+
+// ============= 店铺选择 =============
+function selectShop(shop) {
+  selectedShop = shop;
+  renderShopTabs();
+  applyFilter();
+  // 手动计算偏移，只让 .shop-tabs 内部横向滚动到居中，不影响外层容器
+  const wrap = document.getElementById('shopTabs');
+  const tab = wrap.querySelector('.shop-tab.active');
+  if (tab && wrap) {
+    const target = tab.offsetLeft - (wrap.clientWidth - tab.offsetWidth) / 2;
+    wrap.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }
+}
+
+function applyFilter() {
+  const list = customers.filter(c => c.shop === selectedShop);
+  renderCustomers(list);
+}
+
+// ============= 话术库 =============
+function openScripts() {
+  renderScriptTabs();
+  renderScriptList();
+  document.getElementById('scriptsMask').classList.add('show');
+  document.querySelector('#scriptsMask .sheet').classList.add('show');
+}
+function closeScripts(event) {
+  if (event && event.target.closest('.sheet')) return;
+  document.getElementById('scriptsMask').classList.remove('show');
+  document.querySelector('#scriptsMask .sheet').classList.remove('show');
+}
+function renderScriptTabs() {
+  document.getElementById('scriptTabs').innerHTML = scriptCategories.map(cat => `
+    <span class="sheet__tab ${cat === currentScriptCategory ? 'active' : ''}" onclick="switchScriptCategory('${cat}')">${cat}</span>
+  `).join('');
+}
+function renderScriptList() {
+  const list = scriptsByCategory[currentScriptCategory] || [];
+  document.getElementById('scriptList').innerHTML = list.map((s, idx) => `
+    <div class="script-card">
+      <div class="script-card__text">${s.text}</div>
+      <div class="script-card__bottom">
+        <span class="script-card__tag">${s.tag || ''}</span>
+        <span class="script-card__copy" onclick="copyScript(${idx})">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="11" height="11" rx="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          复制
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+function switchScriptCategory(cat) {
+  currentScriptCategory = cat;
+  renderScriptTabs();
+  renderScriptList();
+}
+function copyScript(idx) {
+  const text = (scriptsByCategory[currentScriptCategory] || [])[idx]?.text;
+  if (!text) return;
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('已复制到剪贴板'); } catch(e){ showToast('复制失败'); }
+    document.body.removeChild(ta);
+  }
+}
+
+// ============= 拨号 =============
+function callCustomer(phone) {
+  // 统一弹一个二次确认（视觉上更像系统提示），点确认才真的调起 tel:
+  const realPhone = phone.replace(/\*/g, ''); // mock 清掉星号占位
+  if (confirm(`即将呼叫：${phone}\n\n点击「确定」调起系统拨号。`)) {
+    window.location.href = `tel:${realPhone || '10010'}`;
+  }
+}
+
+function openProfile(id) {
+  document.getElementById('profileOverlay').classList.add('show');
+}
+
+function closeProfile() {
+  document.getElementById('profileOverlay').classList.remove('show');
+}
+
+// 页面 tab 切换
+function switchTab(name) {
+  const customer = document.getElementById('pageCustomer');
+  const ai = document.getElementById('pageAi');
+  const tabC = document.getElementById('tabCustomer');
+  const tabA = document.getElementById('tabAi');
+  const tabH = document.getElementById('tabHome');
+  const tabS = document.getElementById('tabShop');
+  // 先清除所有 tab 的 active（只影响高亮色，不动页面布局）
+  [tabC, tabA, tabH, tabS].forEach(t => t && t.classList.remove('active'));
+
+  if (name === 'ai') {
+    customer.classList.add('hidden');
+    ai.classList.remove('hidden');
+    tabA.classList.add('active');
+  } else if (name === 'customer') {
+    ai.classList.add('hidden');
+    customer.classList.remove('hidden');
+    tabC.classList.add('active');
+  } else if (name === 'home') {
+    tabH.classList.add('active');
+    showToast('首页');
+  } else if (name === 'shop') {
+    tabS.classList.add('active');
+    showToast('店铺');
+  }
+  // 滚到顶部
+  window.scrollTo(0, 0);
+}
+
+// ============= AI 对话 =============
+function openChat(id) {
+  const c = customers.find(x => x.id === id);
+  const chat = aiChatsByCustomerId[id];
+  if (!c || !chat) return;
+  currentChatCustomer = c;
+  document.getElementById('chatTitle').textContent = `${c.name} · AI 对话`;
+  document.getElementById('chatTurns').textContent = chat.turns;
+  document.getElementById('chatList').innerHTML = chat.messages.map(m => {
+    if (m.type === 'date') return `<div class="chat-time">— ${m.text} —</div>`;
+    if (m.type === 'summary') return `<div class="chat-summary">${m.html}</div>`;
+    if (m.side === 'right') {
+      return `<div class="chat-msg right"><span class="chat-avatar">${c.name[0]}</span><div class="chat-bubble">${m.text}</div></div>`;
+    }
+    return `<div class="chat-msg"><span class="chat-avatar">AI</span><div class="chat-bubble">${m.text}</div></div>`;
+  }).join('');
+  document.getElementById('chatOverlay').classList.add('show');
+  // 自动滚动到底部
+  setTimeout(() => {
+    const list = document.getElementById('chatList');
+    list.scrollTop = list.scrollHeight;
+  }, 300);
+}
+function closeChat() {
+  document.getElementById('chatOverlay').classList.remove('show');
+}
+
+// ============= 行为时间轴底部弹窗 =============
+function openTimeline(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('timelineTitle').textContent = `${c.name} · 行为时间轴`;
+  document.getElementById('timelineList').innerHTML = c.timeline.map(t => `
+    <li>
+      <span class="time">${t.time}</span>
+      <span class="text">${t.text}${t.product ? `<span class=\"product\">${t.product}</span>` : ''}${t.extra}</span>
+    </li>
+  `).join('');
+  document.getElementById('timelineMask').classList.add('show');
+  document.querySelector('#timelineMask .sheet').classList.add('show');
+}
+function closeTimeline(event) {
+  if (event && event !== true && event.target?.closest('.sheet')) return;
+  document.getElementById('timelineMask').classList.remove('show');
+  document.querySelector('#timelineMask .sheet').classList.remove('show');
+}
+
+// ============= 搜索 =============
+function openSearch() {
+  document.getElementById('searchOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('searchInput').focus(), 250);
+}
+
+function closeSearch() {
+  document.getElementById('searchOverlay').classList.remove('show');
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  resetSearchResults();
+}
+
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  resetSearchResults();
+  input.focus(); // 设计规范：点清空后重新激活键盘
+}
+
+function emptyHtml(text) {
+  return `
+    <div class="search-empty">
+      <svg class="search-empty__icon" viewBox="0 0 64 64" width="64" height="64" fill="none">
+        <rect x="14" y="10" width="32" height="42" rx="3" stroke="#D8DAE3" stroke-width="2"/>
+        <path d="M21 22 H39 M21 30 H39 M21 38 H32" stroke="#D8DAE3" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="search-empty__text">${text}</div>
+    </div>`;
+}
+
+function resetSearchResults() {
+  document.getElementById('searchResults').innerHTML = emptyHtml('请输入姓名或店铺名搜索');
+}
+
+function onSearchInput(value) {
+  document.getElementById('searchClear').style.display = value ? 'flex' : 'none';
+  const k = value.trim();
+  if (!k) { resetSearchResults(); return; }
+  const matched = customers.filter(c =>
+    c.name.includes(k) || c.phone.includes(k) || c.shop.includes(k)
+  );
+  if (matched.length === 0) {
+    document.getElementById('searchResults').innerHTML = emptyHtml('暂无搜索结果');
+  } else {
+    document.getElementById('searchResults').innerHTML = matched.map(c => `
+      <div class="customer-card" onclick="closeSearch();openTimeline(${c.id})">
+        <div class="customer-card__title-row">
+          <div class="customer-card__name">
+            ${highlight(c.name, k)}<span class="phone">${highlight(c.phone, k)}</span>
+          </div>
+        </div>
+        <div class="customer-card__activity" style="margin-bottom:0;">
+          ${c.shop} · 最近 ${c.recent}
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function highlight(text, keyword) {
+  if (!keyword) return text;
+  return text.replace(new RegExp(`(${keyword})`, 'g'), '<span class="search-keyword">$1</span>');
+}
+
+// ============= 详情页逻辑已移除 =============
+
+// ============= Toast =============
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+// ============= 工具 =============
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// ============= 初始化 =============
+renderShopTabs();
+applyFilter();
+</script>
+
+</body>
+</html>
